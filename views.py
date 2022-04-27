@@ -111,7 +111,7 @@ def add_notification(_type,
 
     sql.add(new_notification)
 
-    if author_id:
+    if author_id and not _type in (NotificationTypes.NEW_LOVER, NotificationTypes.NEW_HATER):
         notification_long = Notifications_long(new_notification, author_id)
 
         try:
@@ -306,6 +306,8 @@ def add_love_author(token):
             NotificationTypes.NEW_LOVER,
             for_user=author_id,
             object_id=user.id,
+            author_name=user.name,
+            author_photo=user.photo,
             lover=user.name
         )
 
