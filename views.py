@@ -127,7 +127,7 @@ def get_notifications_long():
     try:
         author_id = request.get_json()["author_id"]
 
-        notificaitons_long = sql.select(Notifications_long, user_id=author_id)
+        notificaitons_long = sql.select(Notifications_long, user_id=author_id, order_by="datetime", desc=True)
 
         return json.dumps(notificaitons_long), 200
 
@@ -146,7 +146,7 @@ def read_noification(token):
         token = sql.select_one(Tokens, token=token) or abort(404)
         user_id = token.user_id
 
-        notifications = sql.select(Notifications, user_id=user_id)
+        notifications = sql.select(Notifications, user_id=user_id, order_by="datetime", desc=True)
         sql.delete(Notifications, user_id=user_id)
 
         return json.dumps(notifications), 200
@@ -335,6 +335,24 @@ def delete_love_authors(token):
         return "", 200
     except Exception as ex:
         print(ex)
+
+
+@app.route("/users/get/lovers", methods=["POST"])
+def get_lovers():
+    """
+        neeeds:
+            author id
+    """
+    try:
+        author_id = request.get_json()["author_id"]
+
+        lovers = sql.select(Love_authors, cols=("user_id",), author_id=author_id)
+        response = {"count": len(lovers), "lovers": lovers}
+
+        return json.dumps(response)
+
+    except json.JSONDecodeError:
+        abort(400)
 
 @app.route("/users/get/love_authors/<token>", methods=["POST"])
 def get_love_authors(token):

@@ -1,5 +1,4 @@
 #local
-from sql.models import Model
 import sql.sql_settings as sql_sets
 #python
 import pymysql as sql
@@ -49,12 +48,12 @@ class SQL(sql.connect):
         self.cr.execute(query)
         self.commit()
     
-    def select(self, model, cols="*", sep=" AND ", comp="=", **values):
+    def select(self, model, cols="*", sep=" AND ", comp="=", order_by=None, desc=False, **values):
         table = model().table
 
         values = SQL.__values_constructor(values, sep=sep, comp=comp)
 
-        query = f"SELECT {', '.join(cols)} FROM {table} WHERE ({values})"
+        query = f"SELECT {', '.join(cols)} FROM {table} WHERE ({values}){f' ORDER BY {order_by}' if order_by else ''}{' DESC' if desc else ''}"
         log(query)
 
         self.cr.execute(query)
