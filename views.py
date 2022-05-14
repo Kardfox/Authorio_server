@@ -318,7 +318,7 @@ def add_love_author(token):
         return "", 500
 
 @app.route("/users/delete/love_author/<token>", methods=["POST"])
-def delete_love_authors(token):
+def delete_love_author(token):
     """
         needs:
             token in url /
@@ -337,17 +337,23 @@ def delete_love_authors(token):
         print(ex)
 
 
-@app.route("/users/get/lovers", methods=["POST"])
-def get_lovers():
+@app.route("/users/get/lovers/<token>", methods=["POST"])
+def get_lovers(token):
     """
         neeeds:
-            author id
+            id
     """
     try:
-        author_id = request.get_json()["author_id"]
+        token = sql.select_one(Tokens, token=token) or abort(404)
+
+        author_id = request.get_json()["id"]
 
         lovers = sql.select(Love_authors, cols=("user_id",), author_id=author_id)
-        response = {"count": len(lovers), "lovers": lovers}
+        subscribe = {"user_id": token.user_id} in lovers
+        mirror = str(token.user_id) == author_id
+        response = {"lovers": lovers, "subscribe": int(subscribe), "mirror": int(mirror)}
+
+        print(response)
 
         return json.dumps(response)
 
@@ -373,7 +379,10 @@ def get_love_authors(token):
             for love_author in sql.select(Love_authors, cols=("author_id",), user_id=user_id)
         ]
 
-        return json.dumps(love_authors[0]), 200
+        if len(love_authors):
+            return json.dumps(love_authors[0]), 200
+        else:
+            return "null", 404
 
     except json.JSONDecodeError:
         abort(400)
