@@ -62,7 +62,7 @@ class Users(Model):
                  id="null",
                  name="null",
                  surname="null",
-                 description="null",
+                 description="",
                  email="null",
                  photo="null",
                  password="null"):

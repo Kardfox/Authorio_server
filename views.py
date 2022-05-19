@@ -147,7 +147,8 @@ def read_noification(token):
         user_id = token.user_id
 
         notifications = sql.select(Notifications, user_id=user_id, order_by="datetime", desc=True)
-        sql.delete(Notifications, user_id=user_id)
+        if len(notifications):
+            sql.delete(Notifications, user_id=user_id)
 
         return json.dumps(notifications), 200
 
