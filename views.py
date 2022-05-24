@@ -203,7 +203,7 @@ def get_books():
     try:
         data = request.get_json() or abort(400)
 
-        users = sql.select(Users, sep=" OR ", comp="LIKE", **data)
+        books = sql.select(Books, sep=" OR ", comp="LIKE", **data)
 
         return json.dumps(users, default=str), 200
 
