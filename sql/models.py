@@ -79,20 +79,25 @@ class Books(Model):
     id: str
     title: str
     user_id: str
+    username: str
     tags: str
     raiting: str
     upload_date: str
+    description: str
 
     def __init__(self,
                  id="null",
                  title="null",
                  user_id="null",
+                 username="null",
                  tags="null",
                  raiting=0,
-                 upload_date="null"):
+                 upload_date="null",
+                 description="null"):
         self.id = id
         self.title = title
         self.user_id = user_id
+        self.username = username
         self.tags = tags
         self.raiting = raiting
         self.upload_date = upload_date
@@ -137,16 +142,19 @@ class Notes(Model):
     id: str
     user_id: str
     text: str
+    authorname: str
     datetime: str
 
     def __init__(self,
                  id="null",
                  user_id="null",
                  text="null",
+                 authorname="null",
                  datetime="12.12.2000, 00:00"):
         self.id = id
         self.user_id = user_id
         self.text = text
+        self.authorname = authorname
         self.datetime = datetime
 
 class Tokens(Model):

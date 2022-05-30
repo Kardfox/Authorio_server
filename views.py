@@ -140,7 +140,7 @@ def read_noification(token):
         needs:
             token in url
         
-        404 - token is dead /
+        404 - token is dead
     """
     try:
         token = sql.select_one(Tokens, token=token) or abort(404)
@@ -164,7 +164,8 @@ def add_book(token):
             token in url
 
             title /
-            tags
+            tags /
+            description
         404 - token is dead
         400 - wrong json
     """
@@ -176,6 +177,7 @@ def add_book(token):
 
         data["id"] = generate_object_id()
         data["user_id"] = token.user_id
+        data["username"] = f"{author.name} {author.surname}"
         data["upload_date"] = str(datetime.datetime.today())
 
         new_book = Books(**data)
@@ -205,7 +207,7 @@ def get_books():
 
         books = sql.select(Books, sep=" OR ", comp="LIKE", **data)
 
-        return json.dumps(users, default=str), 200
+        return json.dumps(books, default=str), 200
 
     except json.JSONDecodeError:
         abort(400)
@@ -255,16 +257,18 @@ def add_chapter(token):
 def add_note(token):
     """
         needs:
-            token in url
-
+            token in url /
             text
+
         400 - JSON wrong
+        404 - token is dead
     """
     try:
         text = request.get_json()["text"]
         token = sql.select_one(Tokens, token=token) or abort(404)
-        
-        new_note = Notes(id=generate_object_id(), user_id=token.user_id, text=text, datetime=fnow())
+        author = sql.select_one(Users, id=token.user_id)
+
+        new_note = Notes(id=generate_object_id(), user_id=token.user_id, text=text, authorname=f"{author.name} {author.surname}", datetime=fnow())
         sql.add(new_note)
 
         author = sql.select_one(Users, id=token.user_id)
@@ -281,6 +285,23 @@ def add_note(token):
 
         return "", 200
     except KeyError as ex:
+        abort(400)
+
+@app.route("/notes/get", methods=["POST"])
+def get_notes():
+    """
+        needs:
+            params in json
+        400 - worng json
+    """
+    try:
+        data = request.get_json() or abort(400)
+
+        notes = sql.select(Notes, sep=" OR ", comp="LIKE", **data)
+
+        return json.dumps(notes, default=str), 200
+
+    except json.JSONDecodeError:
         abort(400)
 
 
@@ -343,6 +364,8 @@ def get_lovers(token):
     """
         neeeds:
             id
+
+        404 - token is dead
     """
     try:
         token = sql.select_one(Tokens, token=token) or abort(404)
@@ -561,17 +584,16 @@ def signup():
     except pymysql.err.IntegrityError:
         abort(403)
 
-@app.route("/logout/<token>", methods=["GET"])
+@app.route("/logout/<token>", methods=["POST"])
 def logout(token):
     """
         needs:
             token in URL
-        
-        400 - wrong url /
-        404 - token is dead
     """
-    sql.select(Tokens, token=token) or abort(404)
-
     sql.delete(Tokens, token=token)
 
+    return "", 200
+    
+@app.route("/", methods=["POST"])
+def main():
     return "", 200
