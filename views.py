@@ -206,6 +206,7 @@ def get_books():
         data = request.get_json() or abort(400)
 
         books = sql.select(Books, sep=" OR ", comp="LIKE", **data)
+        print(books)
 
         return json.dumps(books, default=str), 200
 
@@ -446,12 +447,17 @@ def change_user(token):
         changes = request.get_json()
         if "password" in changes:
             abort(403)
+            
+        print(changes)
+        if changes == {}: return "", 200
 
         user = sql.select_one(Users, id=token.user_id)
 
         sql.update(user, **changes)
-
-        return "", 200
+        
+        user = sql.select_one(Users, id=token.user_id)
+        
+        return sql.select_one(Users, id=token.user_id).json("password", token=token.token), 200
     
     except json.JSONDecodeError:
         abort(400)
@@ -527,14 +533,14 @@ def login():
             device /
             password
             
-        404 - user not found /
+        409 - user not found /
         400 - wrong json /
         403 - wrong password /
     """
     new_login = request.get_json()
 
     try:
-        user = sql.select_one(Users, email=new_login["email"]) or abort(404)
+        user = sql.select_one(Users, email=new_login["email"]) or abort(409)
 
         if check_password_hash(user.password, new_login["password"]):
 
