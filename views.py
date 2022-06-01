@@ -471,14 +471,12 @@ def change_user_password(token):
             new_password
 
         404 - token is dead /
-        400 - passwords are the same or json wrong /
         403 - wrong password
     """
     token = sql.select_one(Tokens, token=token) or abort(404)
 
     try:
         data = request.get_json()
-        data = json.loads(data)
 
         new_password = data["new_password"]
         old_password = data["old_password"]
@@ -486,8 +484,6 @@ def change_user_password(token):
         user = sql.select_one(Users, id=token.user_id)
 
         if check_password_hash(user.password, old_password):
-            if check_password_hash(user.password, new_password):
-                abort(400)
 
             sql.update(user, password=generate_password_hash(new_password, method="sha256"))
 
