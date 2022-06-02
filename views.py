@@ -1,4 +1,5 @@
 #flask
+from crypt import methods
 from main import app
 from flask import abort, request
 
@@ -191,7 +192,7 @@ def add_book(token):
             author=f"{author.name} {author.surname}"
         )
 
-        return "", 200
+        return data["id"], 200
     except KeyError as ex:
         abort(400)
 
@@ -205,12 +206,43 @@ def get_books():
     try:
         data = request.get_json() or abort(400)
 
-        books = sql.select(Books, sep=" OR ", comp="LIKE", **data)
+        books = sql.select(
+            Books,
+            cols=("id", "title", "username", "tags", "raiting", "upload_date"),
+            sep=" OR ",
+            comp="LIKE",
+            order_by="upload_date",
+            desc=True,
+            **data
+        )
+
         print(books)
 
-        return json.dumps(books, default=str), 200
-
+        return json.dumps(books), 200
     except json.JSONDecodeError:
+        abort(400)
+
+
+@app.route("/book/get/<token>", methods=["POST"])
+def get_book(token):
+    """
+        needs:
+            token in url
+
+            book_id
+    """
+    try:
+        data = request.get_json() or abort(400)
+        book_id = data["book_id"]
+
+        token = sql.select_one(Tokens, token=token) or abort(404)
+
+        book = sql.select_one(Books, id=book_id)
+        chapters = sql.select(Chapters, cols=("title",), book_id=book_id)
+        is_author = token.user_id == book.user_id
+
+        return {"book": book.json(), "chapters": chapters, "is_author": is_author}, 200
+    except KeyError:
         abort(400)
 
 #===================================================== C H A P T E R S =====================================================
@@ -236,22 +268,42 @@ def add_chapter(token):
         book = sql.select_one(Books, id=data["book_id"])
 
         if book.user_id == token.user_id:
-            new_chapter = Chapters(book_id=book.id, title=data["title"], text=data["text"])
+            new_chapter = Chapters(book_id=book.id, title=data["title"], text=data["text"], upload_date=str(datetime.datetime.today()))
             sql.add(new_chapter)
 
-            MassNotification(NotificationTypes.NEW_CHAPTER,
-                            from_author=author,
-                            for_object=book.id,
-                            ru=True,
-                            #format for title
-                            book=f"{book.title}"
+            MassNotification(
+                NotificationTypes.NEW_CHAPTER,
+                from_author=author,
+                for_object=book.id,
+                ru=True,
+                #format for title
+                book=f"{book.title}"
             )
 
             return "", 200
-        else:
-            abort(403)
+        abort(403)
     except Exception as ex:
         print(ex)
+
+        abort(500)
+
+@app.route("/books/chapters/get/<token>", methods=["POST"])
+def get_chapter(token):
+    """
+        needs:
+            token in url
+
+            book id /
+            title
+        
+        400 - wrong json
+        404 - token is dead
+    """
+    data = request.get_json() or abort(400)
+
+    token = sql.select_one(Tokens, token=token) or abort(404)
+
+    return sql.select(Chapters, order_by="upload_date", desc=True, **data), 200
 
 #===================================================== N O T E S =====================================================
 @app.route("/notes/add/<token>", methods=["POST"])
@@ -298,7 +350,7 @@ def get_notes():
     try:
         data = request.get_json() or abort(400)
 
-        notes = sql.select(Notes, sep=" OR ", comp="LIKE", **data)
+        notes = sql.select(Notes, sep=" OR ", comp="LIKE", order_by="upload_date", desc=True, **data)
 
         return json.dumps(notes, default=str), 200
 
@@ -380,7 +432,7 @@ def get_lovers(token):
 
         print(response)
 
-        return json.dumps(response)
+        return response
 
     except json.JSONDecodeError:
         abort(400)

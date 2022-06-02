@@ -101,6 +101,7 @@ class Books(Model):
         self.tags = tags
         self.raiting = raiting
         self.upload_date = upload_date
+        self.description = description
 
 class Commentaries(Model):
     object_id: str
@@ -143,7 +144,7 @@ class Notes(Model):
     user_id: str
     text: str
     authorname: str
-    datetime: str
+    upload_date: str
 
     def __init__(self,
                  id="null",
@@ -210,14 +211,17 @@ class Chapters(Model):
     book_id: str
     title: str
     text: str
+    upload_date: str
 
     def __init__(self,
                  book_id="null",
                  title="null",
-                 text="null"):
+                 text="null",
+                 upload_date="12.12.2000, 00:00"):
         self.book_id = book_id
         self.title = title
         self.text = text
+        self.upload_date = upload_date
 
 class Notifications_long(Model):
     def __init__(self, notification=None, author_id=None):
