@@ -1,6 +1,3 @@
-import json
-
-
 class LibTypes:
     PRIVATE          = -1
     PUBLIC           =  1
@@ -151,12 +148,12 @@ class Notes(Model):
                  user_id="null",
                  text="null",
                  authorname="null",
-                 datetime="12.12.2000, 00:00"):
+                 upload_date="12.12.2000, 00:00"):
         self.id = id
         self.user_id = user_id
         self.text = text
         self.authorname = authorname
-        self.datetime = datetime
+        self.upload_date = upload_date
 
 class Tokens(Model):
     user_id: str

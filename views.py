@@ -34,8 +34,8 @@ def generate_token(user_id, device):
 
     return sha256(hash).hexdigest()
 
-def fnow():
-    return "{:%d.%m.%Y, %H:%M}".format(datetime.datetime.now())
+def today():
+    return datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
 
 def generate_user_id():
     return str(time() % 1)[2:9]
@@ -76,7 +76,7 @@ class MassNotification(Thread):
                 self.type,
                 for_user=author_lover["user_id"],
                 object_id=self.object_id,
-                datetime=fnow(),
+                datetime=today(),
                 author_name=f"{self.author.name} {self.author.surname}",
                 author_photo=self.author.photo,
                 ru=self.ru,
@@ -105,7 +105,7 @@ def add_notification(_type,
                         text=text,
                         object_id=object_id,
                         object_type=_type,
-                        datetime=fnow(),
+                        datetime=today(),
                         author_name=author_name,
                         author_photo=author_photo
     )
@@ -148,10 +148,12 @@ def read_noification(token):
         user_id = token.user_id
 
         notifications = sql.select(Notifications, user_id=user_id, order_by="datetime", desc=True)
+        print(notifications)
         if len(notifications):
             sql.delete(Notifications, user_id=user_id)
+            pass
 
-        return json.dumps(notifications), 200
+        return json.dumps(notifications, default=str) or {}, 200
 
     except Exception as ex:
         print(ex)
@@ -179,7 +181,7 @@ def add_book(token):
         data["id"] = generate_object_id()
         data["user_id"] = token.user_id
         data["username"] = f"{author.name} {author.surname}"
-        data["upload_date"] = str(datetime.datetime.today())
+        data["upload_date"] = today()
 
         new_book = Books(**data)
         sql.add(new_book)
@@ -201,6 +203,7 @@ def get_books():
     """
         needs:
             params in json
+
         400 - worng json
     """
     try:
@@ -218,7 +221,7 @@ def get_books():
 
         print(books)
 
-        return json.dumps(books), 200
+        return json.dumps(books, default=str), 200
     except json.JSONDecodeError:
         abort(400)
 
@@ -238,7 +241,7 @@ def get_book(token):
         token = sql.select_one(Tokens, token=token) or abort(404)
 
         book = sql.select_one(Books, id=book_id)
-        chapters = sql.select(Chapters, cols=("title",), book_id=book_id)
+        chapters = sql.select(Chapters, cols=("title",), order_by="upload_date", book_id=book_id)
         is_author = token.user_id == book.user_id
 
         return {"book": book.json(), "chapters": chapters, "is_author": is_author}, 200
@@ -246,7 +249,7 @@ def get_book(token):
         abort(400)
 
 #===================================================== C H A P T E R S =====================================================
-@app.route("/books/chapters/add/<token>", methods=["POST"])
+@app.route("/book/chapters/add/<token>", methods=["POST"])
 def add_chapter(token):
     """
         needs:
@@ -262,13 +265,14 @@ def add_chapter(token):
     try:
         data = request.get_json() or abort(400)
 
-        token = sql.select_one(Tokens, token=token) or abort(404)
+        token = sql.select_one(Tokens, token=token)
+        print(token)
         author = sql.select_one(Users, id=token.user_id)
 
         book = sql.select_one(Books, id=data["book_id"])
 
         if book.user_id == token.user_id:
-            new_chapter = Chapters(book_id=book.id, title=data["title"], text=data["text"], upload_date=str(datetime.datetime.today()))
+            new_chapter = Chapters(book_id=book.id, title=data["title"], text=data["text"], upload_date=today())
             sql.add(new_chapter)
 
             MassNotification(
@@ -287,7 +291,7 @@ def add_chapter(token):
 
         abort(500)
 
-@app.route("/books/chapters/get/<token>", methods=["POST"])
+@app.route("/book/chapter/get/<token>", methods=["POST"])
 def get_chapter(token):
     """
         needs:
@@ -303,7 +307,7 @@ def get_chapter(token):
 
     token = sql.select_one(Tokens, token=token) or abort(404)
 
-    return sql.select(Chapters, order_by="upload_date", desc=True, **data), 200
+    return sql.select_one(Chapters, **data).json(), 200
 
 #===================================================== N O T E S =====================================================
 @app.route("/notes/add/<token>", methods=["POST"])
@@ -321,7 +325,7 @@ def add_note(token):
         token = sql.select_one(Tokens, token=token) or abort(404)
         author = sql.select_one(Users, id=token.user_id)
 
-        new_note = Notes(id=generate_object_id(), user_id=token.user_id, text=text, authorname=f"{author.name} {author.surname}", datetime=fnow())
+        new_note = Notes(id=generate_object_id(), user_id=token.user_id, text=text, authorname=f"{author.name} {author.surname}", upload_date=today())
         sql.add(new_note)
 
         author = sql.select_one(Users, id=token.user_id)
@@ -430,8 +434,6 @@ def get_lovers(token):
         mirror = str(token.user_id) == author_id
         response = {"lovers": lovers, "subscribe": int(subscribe), "mirror": int(mirror)}
 
-        print(response)
-
         return response
 
     except json.JSONDecodeError:
@@ -452,14 +454,15 @@ def get_love_authors(token):
         user_id = request.get_json()["user_id"]
 
         love_authors = [
-            sql.select(Users, cols=("id", "name", "photo"), id=love_author["author_id"])
+            sql.select_one(Users, cols=("id", "name", "photo"), id=love_author["author_id"]).json()
             for love_author in sql.select(Love_authors, cols=("author_id",), user_id=user_id)
         ]
 
+        print(love_authors)
+    
         if len(love_authors):
-            return json.dumps(love_authors[0]), 200
-        else:
-            return "null", 404
+            return json.dumps(love_authors, default=str)
+        return {}
 
     except json.JSONDecodeError:
         abort(400)
